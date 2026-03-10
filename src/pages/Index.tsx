@@ -4,8 +4,28 @@ import { BookingsChart } from "@/components/dashboard/BookingsChart";
 import { AssetDistribution } from "@/components/dashboard/AssetDistribution";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { Users, ClipboardCheck, CalendarCheck, DollarSign } from "lucide-react";
+import { useEffect, useState } from "react";
+import { fetchUsers, fetchBookings, fetchAssets } from "@/lib/api";
 
 const Dashboard = () => {
+  const [stats, setStats] = useState({ users: "0", pending: "0", bookings: "0" });
+
+  useEffect(() => {
+    const loadData = () => {
+      Promise.all([fetchUsers(), fetchBookings(), fetchAssets()]).then(([u, b, a]) => {
+        setStats({
+          users: u.length.toString(),
+          pending: a.filter(x => x.approvalStatus === "Pending").length.toString(),
+          bookings: b.length.toString()
+        });
+      });
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -15,9 +35,9 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Users" value="1,248" change="+12.5%" changeType="up" icon={Users} delay={0} />
-          <KPICard title="Pending Approvals" value="23" change="-8.2%" changeType="down" icon={ClipboardCheck} delay={100} />
-          <KPICard title="Total Bookings" value="847" change="+24.3%" changeType="up" icon={CalendarCheck} delay={200} />
+          <KPICard title="Total Users" value={stats.users} change="+12.5%" changeType="up" icon={Users} delay={0} />
+          <KPICard title="Pending Approvals" value={stats.pending} change="-8.2%" changeType="down" icon={ClipboardCheck} delay={100} />
+          <KPICard title="Total Bookings" value={stats.bookings} change="+24.3%" changeType="up" icon={CalendarCheck} delay={200} />
           <KPICard title="Total Revenue" value="₹84.2M" change="+18.7%" changeType="up" icon={DollarSign} delay={300} />
         </div>
 

@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { mockAssets, Asset, formatCurrency } from "@/data/mockData";
+import { Asset, formatCurrency } from "@/data/mockData";
+import { fetchAssets } from "@/lib/api";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,18 @@ const AssetModerationPage = () => {
   const [search, setSearch] = useState("");
   const [approvalFilter, setApprovalFilter] = useState("all");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [assets, setAssets] = useState(mockAssets);
+  const [assets, setAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    const loadData = () => {
+      fetchAssets().then(setAssets);
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
   const { toast } = useToast();
 
   const filtered = useMemo(() => {

@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { mockUsers, mockAssets, User, formatCurrency } from "@/data/mockData";
+import { Asset, User, formatCurrency } from "@/data/mockData";
+import { fetchUsers, fetchAssets } from "@/lib/api";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -18,8 +19,23 @@ const UsersPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
+  const [users, setUsers] = useState<User[]>([]);
+  const [allAssets, setAllAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    const loadData = () => {
+      fetchUsers().then(setUsers);
+      fetchAssets().then(setAllAssets);
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   const filtered = useMemo(() => {
-    return mockUsers.filter((u) => {
+    return users.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
       if (statusFilter !== "all" && u.status !== statusFilter) return false;
       if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.phone.includes(search)) return false;
@@ -160,7 +176,7 @@ const UsersPage = () => {
                 </div>
 
                 {selectedUser.role === "Provider" && (() => {
-                  const providerAssets = mockAssets.filter(a => a.ownerId === selectedUser.id);
+                  const providerAssets = allAssets.filter(a => a.ownerId === selectedUser.id);
                   return (
                     <div>
                       <div className="flex items-center gap-2 mb-3">

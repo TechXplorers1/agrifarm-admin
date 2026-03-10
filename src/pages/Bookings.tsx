@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { mockBookings, Booking, formatCurrency } from "@/data/mockData";
+import { Booking, formatCurrency } from "@/data/mockData";
+import { fetchBookings } from "@/lib/api";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,21 @@ const BookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState(statusParam);
   const [assetTypeFilter, setAssetTypeFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  useEffect(() => {
+    const loadData = () => {
+      fetchBookings().then(setBookings);
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const filtered = useMemo(() => {
-    return mockBookings.filter((b) => {
+    return bookings.filter((b) => {
       if (statusFilter !== "all" && b.status !== statusFilter) return false;
       if (assetTypeFilter !== "all" && b.assetType !== assetTypeFilter) return false;
       if (search && !b.farmerName.toLowerCase().includes(search.toLowerCase()) && !b.id.toLowerCase().includes(search.toLowerCase())) return false;
