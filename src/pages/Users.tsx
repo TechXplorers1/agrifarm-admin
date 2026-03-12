@@ -29,9 +29,6 @@ const UsersPage = () => {
     };
 
     loadData();
-    const interval = setInterval(loadData, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(interval);
   }, []);
 
   const filtered = useMemo(() => {

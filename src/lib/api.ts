@@ -15,7 +15,7 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     return data.map((dto: any): User => {
       const roleStr = (dto.role || "FARMER").toUpperCase();
-      const role = roleStr === "PROVIDER" ? "Provider" : "Farmer";
+      const role = (roleStr === "PROVIDER" || roleStr === "OWNER") ? "Provider" : "Farmer";
       const name = dto.fullName || "Unknown";
       
       return {
