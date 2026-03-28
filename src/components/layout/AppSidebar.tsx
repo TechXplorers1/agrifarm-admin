@@ -2,8 +2,7 @@ import {
   LayoutDashboard, Users, Tractor, Truck, Wrench, HardHat,
   CalendarCheck, Receipt, Settings, ChevronDown, Leaf, LogOut
 } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -53,7 +52,18 @@ export function AppSidebar() {
 
   const isActive = (url: string) => {
     if (url === "/") return location.pathname === "/";
-    return path.startsWith(url);
+    const [urlPath, urlQuery] = url.split("?");
+    
+    if (location.pathname !== urlPath) return false;
+    
+    if (urlQuery) {
+      return location.search.includes(urlQuery);
+    } else {
+      if (urlPath === "/users" && location.search.includes("role=")) return false;
+      if (urlPath === "/assets" && location.search.includes("category=")) return false;
+      if (urlPath === "/bookings" && location.search.includes("status=")) return false;
+      return true;
+    }
   };
 
   const NavGroup = ({ label, items }: { label: string; items: typeof mainNav }) => (
@@ -64,10 +74,10 @@ export function AppSidebar() {
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                <NavLink to={item.url} end={item.url === "/"} activeClassName="bg-sidebar-accent text-primary font-medium">
+                <Link to={item.url} className={isActive(item.url) ? "bg-sidebar-accent text-primary font-medium" : ""}>
                   <item.icon className="h-4 w-4" />
                   {!collapsed && <span>{item.title}</span>}
-                </NavLink>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -91,10 +101,10 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} activeClassName="bg-sidebar-accent text-primary font-medium">
+                    <Link to={item.url} className={isActive(item.url) ? "bg-sidebar-accent text-primary font-medium" : ""}>
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

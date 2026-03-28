@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Asset, User, formatCurrency } from "@/data/mockData";
 import { fetchUsers, fetchAssets } from "@/lib/api";
@@ -11,6 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, Eye, UserX, Ban, Star, Package } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
+import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
+import { useQuery } from "@tanstack/react-query";
 
 const UsersPage = () => {
   const [searchParams] = useSearchParams();
@@ -18,18 +21,21 @@ const UsersPage = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedAssetDetails, setSelectedAssetDetails] = useState<Asset | null>(null);
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [allAssets, setAllAssets] = useState<Asset[]>([]);
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+    staleTime: 60000,
+    refetchInterval: 10000,
+  });
 
-  useEffect(() => {
-    const loadData = () => {
-      fetchUsers().then(setUsers);
-      fetchAssets().then(setAllAssets);
-    };
-
-    loadData();
-  }, []);
+  const { data: allAssets = [] } = useQuery({
+    queryKey: ['assets'],
+    queryFn: fetchAssets,
+    staleTime: 60000,
+    refetchInterval: 10000,
+  });
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -85,10 +91,9 @@ const UsersPage = () => {
                   <TableRow key={user.id} className="cursor-pointer" onClick={() => setSelectedUser(user)}>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">{user.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                        </Avatar>
+                        <div onClick={(e) => e.stopPropagation()}>
+                           <ImagePreviewDialog image={user.avatar} className="h-8 w-8 rounded-full border border-border bg-muted object-cover" altText={user.name} />
+                        </div>
                         <div>
                           <p className="text-sm font-medium">{user.name}</p>
                           <p className="text-xs text-muted-foreground">{user.id}</p>
@@ -140,10 +145,7 @@ const UsersPage = () => {
               </SheetHeader>
               <div className="mt-6 space-y-6">
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={selectedUser.avatar} />
-                    <AvatarFallback className="text-lg bg-primary/10 text-primary">{selectedUser.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                  </Avatar>
+                  <ImagePreviewDialog image={selectedUser.avatar} className="h-16 w-16 rounded-full border border-border bg-muted object-cover" altText={selectedUser.name} />
                   <div>
                     <h3 className="font-heading font-semibold text-lg">{selectedUser.name}</h3>
                     <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
@@ -183,8 +185,14 @@ const UsersPage = () => {
                       {providerAssets.length > 0 ? (
                         <div className="space-y-2">
                           {providerAssets.map(asset => (
-                            <div key={asset.id} className="bg-muted/50 rounded-lg p-3 flex items-center gap-3">
-                              <span className="text-2xl">{asset.image}</span>
+                            <div 
+                              key={asset.id} 
+                              className="bg-muted/50 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-muted/80 transition-colors active:scale-[0.98]"
+                              onClick={() => setSelectedAssetDetails(asset)}
+                            >
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <ImagePreviewDialog image={asset.image} className="w-12 h-12 rounded-md object-cover border border-border bg-background" altText={asset.name} />
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{asset.name}</p>
                                 <p className="text-xs text-muted-foreground">{asset.category} · {asset.subCategory}</p>
@@ -222,6 +230,11 @@ const UsersPage = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      <AssetDetailsSheet 
+        asset={selectedAssetDetails} 
+        onClose={() => setSelectedAssetDetails(null)} 
+      />
     </AppLayout>
   );
 };

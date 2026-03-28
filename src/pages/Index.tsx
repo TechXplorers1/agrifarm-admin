@@ -4,26 +4,20 @@ import { BookingsChart } from "@/components/dashboard/BookingsChart";
 import { AssetDistribution } from "@/components/dashboard/AssetDistribution";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { Users, ClipboardCheck, CalendarCheck, DollarSign } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchUsers, fetchBookings, fetchAssets } from "@/lib/api";
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({ users: "0", pending: "0", bookings: "0", revenue: "0" });
+  const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: fetchUsers, staleTime: 60000, refetchInterval: 10000 });
+  const { data: bookings = [] } = useQuery({ queryKey: ['bookings'], queryFn: fetchBookings, staleTime: 60000, refetchInterval: 10000 });
+  const { data: assets = [] } = useQuery({ queryKey: ['assets'], queryFn: fetchAssets, staleTime: 60000, refetchInterval: 10000 });
 
-  useEffect(() => {
-    const loadData = () => {
-      Promise.all([fetchUsers(), fetchBookings(), fetchAssets()]).then(([u, b, a]) => {
-        setStats({
-          users: u.length.toString(),
-          pending: a.filter(x => x.approvalStatus === "Pending").length.toString(),
-          bookings: b.length.toString(),
-          revenue: b.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0).toString()
-        });
-      });
-    };
-
-    loadData();
-  }, []);
+  const stats = {
+    users: users.length.toString(),
+    pending: assets.filter(x => x.approvalStatus === "Pending").length.toString(),
+    bookings: bookings.length.toString(),
+    revenue: bookings.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0).toString()
+  };
   return (
     <AppLayout>
       <div className="space-y-6">

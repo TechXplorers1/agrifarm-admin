@@ -7,6 +7,12 @@ const getAvatarUrl = (name: string, role: string) => {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || "User")}&backgroundColor=${bgColor}&textColor=ffffff`;
 };
 
+const getFullImageUrl = (path: string | null | undefined) => {
+  if (!path) return null;
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  return `http://localhost:8083${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 export const fetchUsers = async (): Promise<User[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/users/all`);
@@ -25,7 +31,7 @@ export const fetchUsers = async (): Promise<User[]> => {
         role: role as "Farmer" | "Provider",
         district: dto.district || dto.village || "Unknown",
         status: "Active", // Defaulting to Active
-        avatar: dto.profileImageUrl || getAvatarUrl(name, role),
+        avatar: getFullImageUrl(dto.profileImageUrl) || getAvatarUrl(name, role),
         createdAt: new Date().toISOString(), // Backend doesn't provide createdAt
         email: `${name.toLowerCase().replace(/\s+/g, ".")}@mail.com`,
         assetsCount: 0, // Will be computed in components if needed
@@ -95,7 +101,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         availability: dto.isAvailable === false ? "Booked" : "Available",
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
-        image: dto.imageUrl || "🚜",
+        image: getFullImageUrl(dto.imageUrl) || "🚜",
         brand: dto.brandModel,
         description: `Condition: ${dto.conditionStatus || "Good"}`,
         createdAt: new Date().toISOString(),
@@ -118,7 +124,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         availability: dto.isAvailable === false ? "Booked" : "Available",
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
-        image: dto.imageUrl || "🚛",
+        image: getFullImageUrl(dto.imageUrl) || "🚛",
         brand: dto.vehicleNumber,
         description: `Capacity: ${dto.loadCapacity || "Standard"}`,
         createdAt: new Date().toISOString(),
@@ -141,7 +147,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         availability: dto.isAvailable === false ? "Booked" : "Available",
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
-        image: dto.imageUrl || "🧪",
+        image: getFullImageUrl(dto.imageUrl) || "🧪",
         description: dto.description || "Farm Service",
         createdAt: new Date().toISOString(),
         serviceArea: dto.location || "Unknown",
@@ -163,7 +169,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         availability: dto.isAvailable === false ? "Booked" : "Available",
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
-        image: dto.imageUrl || "👷",
+        image: getFullImageUrl(dto.imageUrl) || "👷",
         description: `Skills: ${dto.skills || "General Labor"}`,
         createdAt: new Date().toISOString(),
         serviceArea: dto.location || "Unknown",

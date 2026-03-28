@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Asset, formatCurrency } from "@/data/mockData";
 import { fetchAssets } from "@/lib/api";
@@ -11,6 +11,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Search, Eye, CheckCircle, XCircle, Star, MapPin, User, Calendar } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
+import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const AssetModerationPage = () => {
   const [searchParams] = useSearchParams();
@@ -18,18 +21,15 @@ const AssetModerationPage = () => {
   const [search, setSearch] = useState("");
   const [approvalFilter, setApprovalFilter] = useState("all");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
 
-  useEffect(() => {
-    const loadData = () => {
-      fetchAssets().then(setAssets);
-    };
+  const queryClient = useQueryClient();
+  const { data: assets = [] } = useQuery({
+    queryKey: ['assets'],
+    queryFn: fetchAssets,
+    staleTime: 60000,
+    refetchInterval: 10000,
+  });
 
-    loadData();
-    const interval = setInterval(loadData, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
   const { toast } = useToast();
 
   const filtered = useMemo(() => {
@@ -42,7 +42,9 @@ const AssetModerationPage = () => {
   }, [search, categoryFilter, approvalFilter, assets]);
 
   const handleApproval = (assetId: string, status: "Approved" | "Rejected") => {
-    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, approvalStatus: status } : a)));
+    queryClient.setQueryData<Asset[]>(["assets"], (old) => 
+      old?.map(a => a.id === assetId ? { ...a, approvalStatus: status } : a) ?? []
+    );
     if (selectedAsset?.id === assetId) setSelectedAsset((prev) => prev ? { ...prev, approvalStatus: status } : null);
     toast({
       title: status === "Approved" ? "Asset Approved" : "Asset Rejected",
@@ -98,7 +100,9 @@ const AssetModerationPage = () => {
                   <TableRow key={asset.id} className="cursor-pointer" onClick={() => setSelectedAsset(asset)}>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
-                        <span className="text-xl">{asset.image}</span>
+                        <div onClick={(e) => e.stopPropagation()}>
+                           <ImagePreviewDialog image={asset.image} className="w-10 h-10 rounded-md object-cover border bg-muted" altText={asset.name} />
+                        </div>
                         <div>
                           <p className="text-sm font-medium">{asset.name}</p>
                           <p className="text-xs text-muted-foreground">{asset.id}</p>
@@ -145,80 +149,11 @@ const AssetModerationPage = () => {
         </div>
       </div>
 
-      <Sheet open={!!selectedAsset} onOpenChange={() => setSelectedAsset(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          {selectedAsset && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="font-heading">Asset Details</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6 space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center text-4xl shrink-0">
-                    {selectedAsset.image}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-heading font-semibold text-lg leading-snug">{selectedAsset.name}</h3>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <StatusBadge status={selectedAsset.approvalStatus} />
-                      <StatusBadge status={selectedAsset.availability} />
-                    </div>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <Star className="h-3.5 w-3.5 text-accent fill-accent" />
-                      <span className="text-sm font-medium">{selectedAsset.rating}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-sm text-muted-foreground">{selectedAsset.description}</p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { icon: User, label: "Owner", value: selectedAsset.owner },
-                    { icon: MapPin, label: "Location", value: selectedAsset.location },
-                    { icon: MapPin, label: "Service Area", value: selectedAsset.serviceArea },
-                    { icon: Calendar, label: "Created", value: new Date(selectedAsset.createdAt).toLocaleDateString() },
-                    ...(selectedAsset.brand ? [{ icon: Star, label: "Brand / Model", value: `${selectedAsset.brand} ${selectedAsset.model || ""}` }] : []),
-                    { icon: Star, label: "Operator", value: selectedAsset.operatorAvailable ? "Available" : "Not included" },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="bg-muted/50 rounded-lg p-3">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <Icon className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                      </div>
-                      <p className="text-sm font-medium">{value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground">Pricing</p>
-                  <p className="text-xl font-heading font-bold text-primary mt-1">{formatCurrency(selectedAsset.price)}</p>
-                  <p className="text-xs text-muted-foreground">{selectedAsset.priceUnit}</p>
-                </div>
-
-                <div className="sticky bottom-0 bg-card pt-4 pb-2 border-t border-border flex gap-3">
-                  <Button
-                    className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
-                    onClick={() => handleApproval(selectedAsset.id, "Approved")}
-                    disabled={selectedAsset.approvalStatus === "Approved"}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1.5" /> Approve
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => handleApproval(selectedAsset.id, "Rejected")}
-                    disabled={selectedAsset.approvalStatus === "Rejected"}
-                  >
-                    <XCircle className="h-4 w-4 mr-1.5" /> Reject
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <AssetDetailsSheet 
+        asset={selectedAsset} 
+        onClose={() => setSelectedAsset(null)} 
+        onApprovalUpdate={handleApproval} 
+      />
     </AppLayout>
   );
 };

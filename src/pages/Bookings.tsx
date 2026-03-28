@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Booking, formatCurrency } from "@/data/mockData";
 import { fetchBookings } from "@/lib/api";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, MapPin, FileText, Clock, Users, Calendar } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 const BookingsPage = () => {
   const [searchParams] = useSearchParams();
@@ -17,18 +18,13 @@ const BookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState(statusParam);
   const [assetTypeFilter, setAssetTypeFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
 
-  useEffect(() => {
-    const loadData = () => {
-      fetchBookings().then(setBookings);
-    };
-
-    loadData();
-    const interval = setInterval(loadData, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const { data: bookings = [] } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: fetchBookings,
+    staleTime: 60000,
+    refetchInterval: 10000,
+  });
 
   const filtered = useMemo(() => {
     return bookings.filter((b) => {
