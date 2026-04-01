@@ -1,13 +1,26 @@
-import { mockBookings, formatCurrency } from "@/data/mockData";
+import { formatCurrency } from "@/data/mockData";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useQuery } from "@tanstack/react-query";
+import { fetchBookings } from "@/lib/api";
 
 export function RecentActivity() {
-  const recent = mockBookings.slice(0, 5);
+  const { data: bookings = [], isLoading } = useQuery({ 
+    queryKey: ['bookings'], 
+    queryFn: fetchBookings, 
+    staleTime: 60000, 
+    refetchInterval: 10000 
+  });
+
+  const recent = [...bookings]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
   return (
     <div className="rounded-xl bg-card p-5 shadow-card animate-fade-in" style={{ animationDelay: "400ms" }}>
-      <h3 className="font-heading font-semibold text-card-foreground mb-4">Recent Bookings</h3>
+      <h3 className="font-heading font-semibold text-card-foreground mb-4">
+        Recent Bookings {isLoading && <span className="text-xs text-muted-foreground font-normal ml-2">(Loading...)</span>}
+      </h3>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
