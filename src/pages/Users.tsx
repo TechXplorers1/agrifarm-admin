@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Asset, User, formatCurrency } from "@/data/mockData";
 import { fetchUsers, fetchAssets } from "@/lib/api";
@@ -13,7 +13,9 @@ import { Search, Eye, UserX, Ban, Star, Package } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
 import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateUserStatus } from "@/lib/api";
+import { toast } from "sonner";
 
 const UsersPage = () => {
   const [searchParams] = useSearchParams();
@@ -29,13 +31,23 @@ const UsersPage = () => {
     staleTime: 60000,
     refetchInterval: 10000,
   });
-
   const { data: allAssets = [] } = useQuery({
     queryKey: ['assets'],
     queryFn: fetchAssets,
     staleTime: 60000,
     refetchInterval: 10000,
   });
+
+  const selectId = searchParams.get("select");
+
+  useEffect(() => {
+    if (selectId && users.length > 0) {
+      const user = users.find(u => u.id === selectId);
+      if (user) {
+        setSelectedUser(user);
+      }
+    }
+  }, [selectId, users]);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -44,7 +56,35 @@ const UsersPage = () => {
       if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.phone.includes(search)) return false;
       return true;
     });
-  }, [search, roleFilter, statusFilter]);
+  }, [search, roleFilter, statusFilter, users]);
+
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: "Active" | "Suspended" | "Banned" }) => 
+      updateUserStatus(userId, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['assets'] }); // Services are deactivated
+      toast.success(`User has been ${variables.status.toLowerCase()}`);
+      
+      if (selectedUser && selectedUser.id === variables.userId) {
+        setSelectedUser({ ...selectedUser, status: variables.status as any });
+      }
+    },
+    onError: () => {
+      toast.error("Failed to update user status");
+    }
+  });
+
+  const handleStatusChange = (userId: string, currentStatus: string, newStatus: "Active" | "Suspended" | "Banned", e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentStatus === "Banned") {
+      toast.error("Cannot modify a banned user");
+      return;
+    }
+    updateStatusMutation.mutate({ userId, status: newStatus });
+  };
 
   return (
     <AppLayout>
@@ -114,10 +154,22 @@ const UsersPage = () => {
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => setSelectedUser(user)}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-warning">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-muted-foreground hover:text-warning disabled:opacity-50"
+                          disabled={user.status === "Banned" || updateStatusMutation.isPending}
+                          onClick={(e) => handleStatusChange(user.id, user.status, user.status === "Suspended" ? "Active" : "Suspended", e)}
+                        >
                           <UserX className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                          disabled={user.status === "Banned" || updateStatusMutation.isPending}
+                          onClick={(e) => handleStatusChange(user.id, user.status, "Banned", e)}
+                        >
                           <Ban className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -218,10 +270,20 @@ const UsersPage = () => {
                 })()}
 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 text-warning border-warning/30 hover:bg-warning/10">
-                    <UserX className="h-4 w-4 mr-1.5" /> Suspend
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 text-warning border-warning/30 hover:bg-warning/10 disabled:opacity-50"
+                    disabled={selectedUser.status === "Banned" || updateStatusMutation.isPending}
+                    onClick={() => handleStatusChange(selectedUser.id, selectedUser.status, selectedUser.status === "Suspended" ? "Active" : "Suspended")}
+                  >
+                    <UserX className="h-4 w-4 mr-1.5" /> {selectedUser.status === "Suspended" ? "Activate" : "Suspend"}
                   </Button>
-                  <Button variant="outline" className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10 disabled:opacity-50"
+                    disabled={selectedUser.status === "Banned" || updateStatusMutation.isPending}
+                    onClick={() => handleStatusChange(selectedUser.id, selectedUser.status, "Banned")}
+                  >
                     <Ban className="h-4 w-4 mr-1.5" /> Ban
                   </Button>
                 </div>

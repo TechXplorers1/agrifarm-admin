@@ -7,15 +7,10 @@ interface NotificationPanelProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const notifications = [
-  { id: 1, icon: Package, title: "New asset submitted", description: "Kubota Combine Harvester awaiting approval", time: "2 min ago", read: false, type: "warning" as const },
-  { id: 2, icon: UserPlus, title: "New user registered", description: "Florence Akello joined as a Farmer", time: "15 min ago", read: false, type: "success" as const },
-  { id: 3, icon: AlertTriangle, title: "Asset reported", description: "Crop Spraying Drone flagged by user", time: "1 hour ago", read: false, type: "destructive" as const },
-  { id: 4, icon: CheckCircle, title: "Booking completed", description: "BK-002: 10-Ton Farm Truck delivery done", time: "2 hours ago", read: true, type: "success" as const },
-  { id: 5, icon: Package, title: "Asset updated", description: "Planting Team details modified by Field Masters", time: "3 hours ago", read: true, type: "warning" as const },
-  { id: 6, icon: UserPlus, title: "Provider verified", description: "AgroTech Solutions completed verification", time: "5 hours ago", read: true, type: "success" as const },
-  { id: 7, icon: AlertTriangle, title: "Payment issue", description: "BK-009 payment refund requested", time: "1 day ago", read: true, type: "destructive" as const },
-];
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchAdminNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/api";
+import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 const iconColors: Record<string, string> = {
   success: "text-success bg-success/10",
@@ -24,7 +19,66 @@ const iconColors: Record<string, string> = {
 };
 
 export function NotificationPanel({ open, onOpenChange }: NotificationPanelProps) {
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const { data: rawNotifications = [] } = useQuery({
+    queryKey: ['admin-notifications'],
+    queryFn: fetchAdminNotifications,
+    refetchInterval: 10000,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: markNotificationAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+    }
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: markAllNotificationsAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+    }
+  });
+
+  const notifications = rawNotifications.map((n: any) => ({
+    id: n.id,
+    icon: n.type === 'success' ? CheckCircle : n.type === 'warning' ? Package : n.type === 'destructive' ? AlertTriangle : Bell,
+    title: n.title,
+    description: n.message,
+    time: n.createdAt ? formatDistanceToNow(new Date(n.createdAt), { addSuffix: true }) : "just now",
+    read: n.read,
+    type: n.type || "warning",
+    relatedId: n.relatedId
+  }));
+
+  const unreadCount = notifications.filter((n: any) => !n.read).length;
+
+  const handleNotificationClick = (n: any) => {
+    if (!n.read) markAsReadMutation.mutate(n.id);
+    
+    const title = n.title.toLowerCase();
+    const selectParam = n.relatedId ? `&select=${n.relatedId}` : "";
+    
+    if (title.includes("user")) {
+      navigate(`/users?select=${n.relatedId}`);
+    } else if (title.includes("equipment")) {
+      navigate(`/assets?category=Equipment${selectParam}`);
+    } else if (title.includes("service")) {
+      navigate(`/assets?category=Services${selectParam}`);
+    } else if (title.includes("transport") || title.includes("vehicle")) {
+      navigate(`/assets?category=Transport${selectParam}`);
+    } else if (title.includes("worker")) {
+      navigate(`/assets?category=Farm Workers${selectParam}`);
+    } else if (title.includes("asset")) {
+      navigate(`/assets?category=all${selectParam}`);
+    } else if (title.includes("booking")) {
+      navigate(`/bookings?select=${n.relatedId}`);
+    }
+    
+    onOpenChange(false);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -40,17 +94,23 @@ export function NotificationPanel({ open, onOpenChange }: NotificationPanelProps
                 </span>
               )}
             </SheetTitle>
-            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => markAllReadMutation.mutate()}>
               Mark all read
             </Button>
           </div>
         </SheetHeader>
 
         <div className="divide-y divide-border">
-          {notifications.map((n) => (
+          {notifications.length === 0 && (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              No notifications available
+            </div>
+          )}
+          {notifications.map((n: any) => (
             <div
               key={n.id}
-              className={`p-4 flex gap-3 transition-colors hover:bg-muted/30 ${!n.read ? "bg-primary/5" : ""}`}
+              className={`p-4 flex gap-3 transition-colors hover:bg-muted/30 cursor-pointer ${!n.read ? "bg-primary/5" : ""}`}
+              onClick={() => handleNotificationClick(n)}
             >
               <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${iconColors[n.type]}`}>
                 <n.icon className="h-4 w-4" />

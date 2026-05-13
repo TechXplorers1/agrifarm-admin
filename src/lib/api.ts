@@ -30,7 +30,7 @@ export const fetchUsers = async (): Promise<User[]> => {
         phone: dto.phoneNumber || "N/A",
         role: role as "Farmer" | "Provider",
         district: dto.district || dto.village || "Unknown",
-        status: "Active", // Defaulting to Active
+        status: (dto.status || "Active") as any,
         avatar: getFullImageUrl(dto.profileImageUrl) || getAvatarUrl(name, role),
         createdAt: new Date().toISOString(), // Backend doesn't provide createdAt
         email: `${name.toLowerCase().replace(/\s+/g, ".")}@mail.com`,
@@ -41,6 +41,19 @@ export const fetchUsers = async (): Promise<User[]> => {
   } catch (error) {
     console.error("Error fetching users:", error);
     return [];
+  }
+};
+
+export const updateUserStatus = async (userId: string, status: "Active" | "Suspended" | "Banned"): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update user status");
   }
 };
 
@@ -182,4 +195,29 @@ export const fetchAssets = async (): Promise<Asset[]> => {
     console.error("Error fetching assets:", error);
     return [];
   }
+};
+
+export const fetchAdminNotifications = async (): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/notifications/user/admin`);
+    if (!response.ok) throw new Error("Failed to fetch notifications");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return [];
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+    method: "PUT",
+  });
+  if (!response.ok) throw new Error("Failed to mark as read");
+};
+
+export const markAllNotificationsAsRead = async (): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/notifications/user/admin/read-all`, {
+    method: "PUT",
+  });
+  if (!response.ok) throw new Error("Failed to mark all as read");
 };

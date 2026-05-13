@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Asset, formatCurrency } from "@/data/mockData";
 import { fetchAssets } from "@/lib/api";
@@ -29,6 +29,17 @@ const AssetModerationPage = () => {
     staleTime: 60000,
     refetchInterval: 10000,
   });
+
+  const selectId = searchParams.get("select");
+
+  useEffect(() => {
+    if (selectId && assets.length > 0) {
+      const asset = assets.find(a => a.id === selectId);
+      if (asset) {
+        setSelectedAsset(asset);
+      }
+    }
+  }, [selectId, assets]);
 
   const { toast } = useToast();
 

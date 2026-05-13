@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Booking, formatCurrency } from "@/data/mockData";
 import { fetchBookings } from "@/lib/api";
@@ -25,6 +25,17 @@ const BookingsPage = () => {
     staleTime: 60000,
     refetchInterval: 10000,
   });
+
+  const selectId = searchParams.get("select");
+
+  useEffect(() => {
+    if (selectId && bookings.length > 0) {
+      const booking = bookings.find(b => b.id === selectId);
+      if (booking) {
+        setSelectedBooking(booking);
+      }
+    }
+  }, [selectId, bookings]);
 
   const filtered = useMemo(() => {
     return bookings.filter((b) => {

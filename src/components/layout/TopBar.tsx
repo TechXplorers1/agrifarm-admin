@@ -5,9 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationPanel } from "./NotificationPanel";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAdminNotifications } from "@/lib/api";
 
 export function TopBar() {
   const [notifOpen, setNotifOpen] = useState(false);
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['admin-notifications'],
+    queryFn: fetchAdminNotifications,
+    refetchInterval: 10000,
+  });
+
+  const unreadCount = notifications.filter((n: any) => !n.read).length;
 
   return (
     <>
@@ -30,7 +40,9 @@ export function TopBar() {
             onClick={() => setNotifOpen(true)}
           >
             <Bell className="h-4.5 w-4.5" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+            )}
           </Button>
           <div className="flex items-center gap-2 pl-2 border-l border-border">
             <Avatar className="h-8 w-8">
