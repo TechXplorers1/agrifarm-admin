@@ -19,6 +19,37 @@ export const fetchUsers = async (): Promise<User[]> => {
     if (!response.ok) throw new Error("Failed to fetch users");
     const data = await response.json();
     
+    // Fetch bookings and assets raw DTOs in parallel to compute counters
+    const [bookingsRes, equipRes, transRes, servRes, workRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/bookings/all`).catch(() => null),
+      fetch(`${API_BASE_URL}/inventory/equipment`).catch(() => null),
+      fetch(`${API_BASE_URL}/inventory/vehicles`).catch(() => null),
+      fetch(`${API_BASE_URL}/inventory/services`).catch(() => null),
+      fetch(`${API_BASE_URL}/inventory/worker-groups`).catch(() => null),
+    ]);
+
+    const bookingsData = bookingsRes && bookingsRes.ok ? await bookingsRes.json() : [];
+    const equipData = equipRes && equipRes.ok ? await equipRes.json() : [];
+    const transData = transRes && transRes.ok ? await transRes.json() : [];
+    const servData = servRes && servRes.ok ? await servRes.json() : [];
+    const workData = workRes && workRes.ok ? await workRes.json() : [];
+
+    const assetsCountMap = new Map<string, number>();
+    const incrementAsset = (ownerId: string) => {
+      if (!ownerId) return;
+      assetsCountMap.set(ownerId, (assetsCountMap.get(ownerId) || 0) + 1);
+    };
+    equipData.forEach((e: any) => incrementAsset(e.ownerId));
+    transData.forEach((v: any) => incrementAsset(v.ownerId));
+    servData.forEach((s: any) => incrementAsset(s.ownerId));
+    workData.forEach((w: any) => incrementAsset(w.ownerId));
+
+    const bookingsCountMap = new Map<string, number>();
+    bookingsData.forEach((b: any) => {
+      if (b.farmerId) bookingsCountMap.set(b.farmerId, (bookingsCountMap.get(b.farmerId) || 0) + 1);
+      if (b.providerId) bookingsCountMap.set(b.providerId, (bookingsCountMap.get(b.providerId) || 0) + 1);
+    });
+
     return data.map((dto: any): User => {
       const roleStr = (dto.role || "FARMER").toUpperCase();
       const role = (roleStr === "PROVIDER" || roleStr === "OWNER") ? "Provider" : "Farmer";
@@ -34,8 +65,8 @@ export const fetchUsers = async (): Promise<User[]> => {
         avatar: getFullImageUrl(dto.profileImageUrl) || getAvatarUrl(name, role),
         createdAt: new Date().toISOString(), // Backend doesn't provide createdAt
         email: `${name.toLowerCase().replace(/\s+/g, ".")}@mail.com`,
-        assetsCount: 0, // Will be computed in components if needed
-        bookingsCount: 0,
+        assetsCount: assetsCountMap.get(dto.userId) || 0,
+        bookingsCount: bookingsCountMap.get(dto.userId) || 0,
       };
     });
   } catch (error) {
@@ -63,21 +94,36 @@ export const fetchBookings = async (): Promise<Booking[]> => {
     if (!response.ok) throw new Error("Failed to fetch bookings");
     const data = await response.json();
     
-    return data.map((dto: any): Booking => ({
-      id: dto.bookingId,
-      farmerId: dto.farmerId,
-      farmerName: "Farmer", // Backend DTO lacks farmerName, UI will fetch or fallback
-      providerId: dto.providerId || "Unknown",
-      providerName: "Provider", // Backend DTO lacks providerName
-      assetType: dto.assetType || "Unknown",
-      assetName: dto.assetId || "Unknown Asset", // Backend DTO lacks assetName
-      scheduleTime: dto.scheduledStartTime || dto.bookingDate || new Date().toISOString(),
-      totalAmount: dto.totalAmount || 0,
-      status: (dto.status || "Pending") as any,
-      location: dto.addressText || "Unknown Location",
-      notes: dto.notes || "",
-      createdAt: dto.bookingDate || new Date().toISOString(),
-    }));
+    // Resolve user profiles and assets to dynamically populate names
+    const [usersRes, assets] = await Promise.all([
+      fetch(`${API_BASE_URL}/users/all`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetchAssets().catch(() => []),
+    ]);
+
+    const usersMap = new Map<string, any>(usersRes.map((u: any) => [u.userId, u]));
+    const assetsMap = new Map<string, Asset>(assets.map(a => [a.id, a]));
+
+    return data.map((dto: any): Booking => {
+      const farmer = usersMap.get(dto.farmerId);
+      const provider = usersMap.get(dto.providerId);
+      const asset = assetsMap.get(dto.assetId);
+
+      return {
+        id: dto.bookingId,
+        farmerId: dto.farmerId,
+        farmerName: farmer ? (farmer.fullName || "Unknown Farmer") : `Farmer (${dto.farmerId.slice(0, 4)})`,
+        providerId: dto.providerId || "Unknown",
+        providerName: provider ? (provider.fullName || "Unknown Provider") : `Provider (${dto.providerId ? dto.providerId.slice(0, 4) : 'N/A'})`,
+        assetType: dto.assetType || "Unknown",
+        assetName: asset ? asset.name : (dto.assetId || "Unknown Asset"),
+        scheduleTime: dto.scheduledStartTime || dto.bookingDate || new Date().toISOString(),
+        totalAmount: dto.totalAmount || 0,
+        status: (dto.status || "Pending") as any,
+        location: dto.addressText || "Unknown Location",
+        notes: dto.notes || "",
+        createdAt: dto.bookingDate || new Date().toISOString(),
+      };
+    });
   } catch (error) {
     console.error("Error fetching bookings:", error);
     return [];
@@ -116,7 +162,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         approvalStatus: (dto.approvalStatus || "Pending") as any,
         image: getFullImageUrl(dto.imageUrl) || "🚜",
         brand: dto.brandModel,
-        description: `Condition: ${dto.conditionStatus || "Good"}`,
+        description: dto.description || `Condition: ${dto.conditionStatus || "Good"}`,
         createdAt: new Date().toISOString(),
         serviceArea: dto.location || "Unknown",
         operatorAvailable: dto.operatorAvailable || false,
@@ -220,4 +266,33 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
     method: "PUT",
   });
   if (!response.ok) throw new Error("Failed to mark all as read");
+};
+
+export const updateAssetApprovalStatus = async (assetId: string, category: string, status: "Approved" | "Rejected"): Promise<void> => {
+  let endpoint = "";
+  const cat = category.toLowerCase().replace(/\s+/g, "");
+  
+  if (cat === "equipment") {
+    endpoint = `${API_BASE_URL}/inventory/equipment/${assetId}`;
+  } else if (cat === "transport") {
+    endpoint = `${API_BASE_URL}/inventory/vehicles/${assetId}`;
+  } else if (cat === "service") {
+    endpoint = `${API_BASE_URL}/inventory/services/${assetId}`;
+  } else if (cat === "workergroup") {
+    endpoint = `${API_BASE_URL}/inventory/worker-groups/${assetId}`;
+  } else {
+    throw new Error(`Unknown category: ${category}`);
+  }
+
+  const response = await fetch(endpoint, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ approvalStatus: status }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update asset approval status for category ${category}`);
+  }
 };

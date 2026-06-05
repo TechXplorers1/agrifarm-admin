@@ -5,9 +5,10 @@ import { fetchBookings } from "@/lib/api";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Search, MapPin, FileText, Clock, Users, Calendar } from "lucide-react";
+import { Search, MapPin, FileText, Clock, Users, Calendar, ArrowLeft } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
@@ -44,7 +45,7 @@ const BookingsPage = () => {
       if (search && !b.farmerName.toLowerCase().includes(search.toLowerCase()) && !b.id.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [search, statusFilter, assetTypeFilter]);
+  }, [search, statusFilter, assetTypeFilter, bookings]);
 
   return (
     <AppLayout>
@@ -130,7 +131,18 @@ const BookingsPage = () => {
           {selectedBooking && (
             <>
               <SheetHeader>
-                <SheetTitle className="font-heading">Booking Details</SheetTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full -ml-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setSelectedBooking(null)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Back</span>
+                  </Button>
+                  <SheetTitle className="font-heading">Booking Details</SheetTitle>
+                </div>
               </SheetHeader>
               <div className="mt-6 space-y-6">
                 <div className="flex items-center justify-between">

@@ -1,11 +1,12 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Star, MapPin, User, Calendar } from "lucide-react";
+import { CheckCircle, XCircle, Star, MapPin, User, Calendar, ArrowLeft } from "lucide-react";
 import { Asset, formatCurrency } from "@/data/mockData";
 import { StatusBadge } from "./StatusBadge";
 import { ImagePreviewDialog } from "./ImagePreviewDialog";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { updateAssetApprovalStatus } from "@/lib/api";
 
 interface AssetDetailsSheetProps {
   asset: Asset | null;
@@ -18,20 +19,31 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleApproval = (status: "Approved" | "Rejected") => {
-    if (!asset) return;
-    
-    if (onApprovalUpdate) {
-      onApprovalUpdate(asset.id, status);
-    } else {
-      queryClient.setQueryData<Asset[]>(["assets"], (old) => 
-        old?.map(a => a.id === asset.id ? { ...a, approvalStatus: status } : a) ?? []
-      );
+  const updateApprovalMutation = useMutation({
+    mutationFn: ({ assetId, category, status }: { assetId: string; category: string; status: "Approved" | "Rejected" }) => 
+      updateAssetApprovalStatus(assetId, category, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
       toast({
-        title: status === "Approved" ? "Asset Approved" : "Asset Rejected",
-        description: `Asset has been ${status.toLowerCase()} successfully.`,
+        title: variables.status === "Approved" ? "Asset Approved" : "Asset Rejected",
+        description: `Asset has been ${variables.status.toLowerCase()} successfully.`,
+      });
+      if (onApprovalUpdate) {
+        onApprovalUpdate(variables.assetId, variables.status);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update asset approval status",
+        variant: "destructive"
       });
     }
+  });
+
+  const handleApproval = (status: "Approved" | "Rejected") => {
+    if (!asset) return;
+    updateApprovalMutation.mutate({ assetId: asset.id, category: asset.category, status });
   };
 
   return (
@@ -40,7 +52,18 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
         {asset && (
           <>
             <SheetHeader>
-              <SheetTitle className="font-heading">Asset Details</SheetTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full -ml-2 text-muted-foreground hover:text-foreground"
+                  onClick={onClose}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Back</span>
+                </Button>
+                <SheetTitle className="font-heading">Asset Details</SheetTitle>
+              </div>
             </SheetHeader>
             <div className="mt-6 space-y-6">
               <div className="flex items-start gap-4">

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Search, Eye, UserX, Ban, Star, Package } from "lucide-react";
+import { Search, Eye, UserX, Ban, Star, Package, ArrowLeft } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
 import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
@@ -193,7 +193,18 @@ const UsersPage = () => {
           {selectedUser && (
             <>
               <SheetHeader>
-                <SheetTitle className="font-heading">User Profile</SheetTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full -ml-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setSelectedUser(null)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Back</span>
+                  </Button>
+                  <SheetTitle className="font-heading">User Profile</SheetTitle>
+                </div>
               </SheetHeader>
               <div className="mt-6 space-y-6">
                 <div className="flex items-center gap-4">

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Asset, formatCurrency } from "@/data/mockData";
-import { fetchAssets } from "@/lib/api";
+import { fetchAssets, updateAssetApprovalStatus } from "@/lib/api";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
 import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const AssetModerationPage = () => {
   const [searchParams] = useSearchParams();
@@ -52,15 +52,32 @@ const AssetModerationPage = () => {
     });
   }, [search, categoryFilter, approvalFilter, assets]);
 
+  const updateApprovalMutation = useMutation({
+    mutationFn: ({ assetId, category, status }: { assetId: string; category: string; status: "Approved" | "Rejected" }) => 
+      updateAssetApprovalStatus(assetId, category, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast({
+        title: variables.status === "Approved" ? "Asset Approved" : "Asset Rejected",
+        description: `Asset has been ${variables.status.toLowerCase()} successfully.`,
+      });
+      if (selectedAsset?.id === variables.assetId) {
+        setSelectedAsset(prev => prev ? { ...prev, approvalStatus: variables.status } : null);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update asset approval status",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleApproval = (assetId: string, status: "Approved" | "Rejected") => {
-    queryClient.setQueryData<Asset[]>(["assets"], (old) => 
-      old?.map(a => a.id === assetId ? { ...a, approvalStatus: status } : a) ?? []
-    );
-    if (selectedAsset?.id === assetId) setSelectedAsset((prev) => prev ? { ...prev, approvalStatus: status } : null);
-    toast({
-      title: status === "Approved" ? "Asset Approved" : "Asset Rejected",
-      description: `Asset has been ${status.toLowerCase()} successfully.`,
-    });
+    const asset = assets.find(a => a.id === assetId);
+    if (!asset) return;
+    updateApprovalMutation.mutate({ assetId, category: asset.category, status });
   };
 
   const categoryTitle = categoryFilter !== "all" ? categoryFilter : "All Assets";
