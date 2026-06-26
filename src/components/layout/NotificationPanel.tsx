@@ -42,7 +42,9 @@ export function NotificationPanel({ open, onOpenChange }: NotificationPanelProps
     }
   });
 
-  const notifications = rawNotifications.map((n: any) => ({
+  const notifications = rawNotifications
+    .filter((n: any) => !n.read)
+    .map((n: any) => ({
     id: n.id,
     icon: n.type === 'success' ? CheckCircle : n.type === 'warning' ? Package : n.type === 'destructive' ? AlertTriangle : Bell,
     title: n.title,
@@ -53,7 +55,7 @@ export function NotificationPanel({ open, onOpenChange }: NotificationPanelProps
     relatedId: n.relatedId
   }));
 
-  const unreadCount = notifications.filter((n: any) => !n.read).length;
+  const unreadCount = notifications.length;
 
   const handleNotificationClick = (n: any) => {
     if (!n.read) markAsReadMutation.mutate(n.id);
