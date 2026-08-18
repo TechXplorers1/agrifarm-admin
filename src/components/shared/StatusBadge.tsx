@@ -19,9 +19,14 @@ const statusStyles: Record<StatusType, string> = {
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
   const style = statusStyles[status as StatusType] ?? "bg-muted text-muted-foreground";
+  
+  let displayText = status;
+  if (status === "Approved") displayText = "Active";
+  if (status === "Rejected") displayText = "Deactivated";
+
   return (
     <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", style, className)}>
-      {status}
+      {displayText}
     </span>
   );
 }

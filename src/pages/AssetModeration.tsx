@@ -58,8 +58,8 @@ const AssetModerationPage = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
       toast({
-        title: variables.status === "Approved" ? "Asset Approved" : "Asset Rejected",
-        description: `Asset has been ${variables.status.toLowerCase()} successfully.`,
+        title: variables.status === "Approved" ? "Asset Activated" : "Asset Deactivated",
+        description: `Asset has been ${variables.status === "Approved" ? "activated" : "deactivated"} successfully.`,
       });
       if (selectedAsset?.id === variables.assetId) {
         setSelectedAsset(prev => prev ? { ...prev, approvalStatus: variables.status } : null);

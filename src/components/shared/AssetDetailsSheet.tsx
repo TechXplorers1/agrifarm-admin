@@ -116,7 +116,7 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
                   onClick={() => handleApproval("Approved")}
                   disabled={asset.approvalStatus === "Approved"}
                 >
-                  <CheckCircle className="h-4 w-4 mr-1.5" /> Approve
+                  <CheckCircle className="h-4 w-4 mr-1.5" /> Activate
                 </Button>
                 <Button
                   variant="destructive"
@@ -124,7 +124,7 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
                   onClick={() => handleApproval("Rejected")}
                   disabled={asset.approvalStatus === "Rejected"}
                 >
-                  <XCircle className="h-4 w-4 mr-1.5" /> Reject
+                  <XCircle className="h-4 w-4 mr-1.5" /> Deactivate
                 </Button>
               </div>
             </div>
