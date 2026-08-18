@@ -1,6 +1,7 @@
 import { User, Asset, Booking } from "../data/mockData";
 
-const API_BASE_URL = "http://localhost:8083/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api-prod.agrifarms.in/api";
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || "https://api-prod.agrifarms.in";
 
 const getAvatarUrl = (name: string, role: string) => {
   const bgColor = role.toLowerCase() === "farmer" ? "2E7D32" : "8D6E63";
@@ -10,7 +11,7 @@ const getAvatarUrl = (name: string, role: string) => {
 const getFullImageUrl = (path: string | null | undefined) => {
   if (!path) return null;
   if (path.startsWith('http') || path.startsWith('data:')) return path;
-  return `http://localhost:8083${path.startsWith('/') ? '' : '/'}${path}`;
+  return `${IMAGE_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 export const fetchUsers = async (): Promise<User[]> => {
@@ -18,7 +19,7 @@ export const fetchUsers = async (): Promise<User[]> => {
     const response = await fetch(`${API_BASE_URL}/users/all`);
     if (!response.ok) throw new Error("Failed to fetch users");
     const data = await response.json();
-    
+
     // Fetch bookings and assets raw DTOs in parallel to compute counters
     const [bookingsRes, equipRes, transRes, servRes, workRes] = await Promise.all([
       fetch(`${API_BASE_URL}/bookings/all`).catch(() => null),
@@ -54,7 +55,7 @@ export const fetchUsers = async (): Promise<User[]> => {
       const roleStr = (dto.role || "FARMER").toUpperCase();
       const role = (roleStr === "PROVIDER" || roleStr === "OWNER") ? "Provider" : "Farmer";
       const name = dto.fullName || "Unknown";
-      
+
       return {
         id: dto.userId,
         name: name,
@@ -93,7 +94,7 @@ export const fetchBookings = async (): Promise<Booking[]> => {
     const response = await fetch(`${API_BASE_URL}/bookings/all`);
     if (!response.ok) throw new Error("Failed to fetch bookings");
     const data = await response.json();
-    
+
     // Resolve user profiles and assets to dynamically populate names
     const [usersRes, assets] = await Promise.all([
       fetch(`${API_BASE_URL}/users/all`).then(r => r.ok ? r.json() : []).catch(() => []),
@@ -271,7 +272,7 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
 export const updateAssetApprovalStatus = async (assetId: string, category: string, status: "Approved" | "Rejected"): Promise<void> => {
   let endpoint = "";
   const cat = category.toLowerCase().replace(/\s+/g, "");
-  
+
   if (cat === "equipment") {
     endpoint = `${API_BASE_URL}/inventory/equipment/${assetId}`;
   } else if (cat === "transport") {
