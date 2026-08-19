@@ -1,15 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationPanel } from "./NotificationPanel";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAdminNotifications } from "@/lib/api";
+import { getAdminProfile, AdminProfile } from "@/lib/adminProfile";
 
 export function TopBar() {
   const [notifOpen, setNotifOpen] = useState(false);
+  const [profile, setProfile] = useState<AdminProfile>(getAdminProfile());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setProfile(getAdminProfile());
+    };
+    window.addEventListener("admin-profile-updated", handleUpdate);
+    return () => window.removeEventListener("admin-profile-updated", handleUpdate);
+  }, []);
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['admin-notifications'],
@@ -18,6 +29,7 @@ export function TopBar() {
   });
 
   const unreadCount = notifications.filter((n: any) => !n.read).length;
+  const initials = profile.name ? profile.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "AD";
 
   return (
     <>
@@ -33,25 +45,33 @@ export function TopBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative text-muted-foreground hover:text-foreground"
-            onClick={() => setNotifOpen(true)}
-          >
-            <Bell className="h-4.5 w-4.5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
-            )}
-          </Button>
-          <div className="flex items-center gap-2 pl-2 border-l border-border">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="https://api.dicebear.com/7.x/initials/svg?seed=Admin&backgroundColor=2E7D32&textColor=ffffff" />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">AD</AvatarFallback>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative text-muted-foreground hover:text-foreground"
+                onClick={() => setNotifOpen(true)}
+              >
+                <Bell className="h-4.5 w-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+                )}
+                <span className="sr-only">Notifications</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Notifications</p>
+            </TooltipContent>
+          </Tooltip>
+          <div className="flex items-center gap-2.5 pl-2 border-l border-border">
+            <Avatar className="h-8 w-8 border border-border bg-muted">
+              <AvatarImage src={profile.avatarUrl} alt={profile.name} className="object-cover" />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback>
             </Avatar>
             <div className="hidden md:block">
-              <p className="text-sm font-medium leading-none">Admin</p>
-              <p className="text-xs text-muted-foreground">Super Admin</p>
+              <p className="text-sm font-medium leading-none">{profile.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{profile.role}</p>
             </div>
           </div>
         </div>
