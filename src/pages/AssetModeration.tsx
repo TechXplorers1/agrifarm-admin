@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
 import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
 
 const AssetModerationPage = () => {
   const [searchParams] = useSearchParams();
@@ -23,7 +24,7 @@ const AssetModerationPage = () => {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
   const queryClient = useQueryClient();
-  const { data: assets = [] } = useQuery({
+  const { data: assets = [], isLoading } = useQuery({
     queryKey: ['assets'],
     queryFn: fetchAssets,
     staleTime: 60000,
@@ -81,6 +82,16 @@ const AssetModerationPage = () => {
   };
 
   const categoryTitle = categoryFilter !== "all" ? categoryFilter : "All Assets";
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Spinner size={48} />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

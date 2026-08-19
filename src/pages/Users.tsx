@@ -16,6 +16,7 @@ import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateUserStatus } from "@/lib/api";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 const UsersPage = () => {
   const [searchParams] = useSearchParams();
@@ -25,18 +26,20 @@ const UsersPage = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedAssetDetails, setSelectedAssetDetails] = useState<Asset | null>(null);
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ['users'],
     queryFn: fetchUsers,
     staleTime: 60000,
     refetchInterval: 10000,
   });
-  const { data: allAssets = [] } = useQuery({
+  const { data: allAssets = [], isLoading: isLoadingAssets } = useQuery({
     queryKey: ['assets'],
     queryFn: fetchAssets,
     staleTime: 60000,
     refetchInterval: 10000,
   });
+
+  const isLoading = isLoadingUsers || isLoadingAssets;
 
   const selectId = searchParams.get("select");
 
@@ -85,6 +88,16 @@ const UsersPage = () => {
     }
     updateStatusMutation.mutate({ userId, status: newStatus });
   };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Spinner size={48} />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Search, MapPin, FileText, Clock, Users, Calendar, ArrowLeft } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
 
 const BookingsPage = () => {
   const [searchParams] = useSearchParams();
@@ -20,7 +21,7 @@ const BookingsPage = () => {
   const [assetTypeFilter, setAssetTypeFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
-  const { data: bookings = [] } = useQuery({
+  const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['bookings'],
     queryFn: fetchBookings,
     staleTime: 60000,
@@ -46,6 +47,16 @@ const BookingsPage = () => {
       return true;
     });
   }, [search, statusFilter, assetTypeFilter, bookings]);
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Spinner size={48} />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
