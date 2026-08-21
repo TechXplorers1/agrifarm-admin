@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Search, Eye, CheckCircle, XCircle, Star, MapPin, User, Calendar } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Search, Eye, CheckCircle, XCircle, Star } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
@@ -145,11 +145,28 @@ const AssetModerationPage = () => {
                         <div>
                           <p className="text-sm font-medium">{asset.name}</p>
                           <p className="text-xs text-muted-foreground">{asset.id}</p>
+                          {asset.category === "Worker Group" && (
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-medium">
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                👨 {asset.maleWorkersCount ?? 0} Male
+                              </span>
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                                👩 {asset.femaleWorkersCount ?? 0} Female
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">{asset.category}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{asset.subCategory}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      <div>{asset.subCategory}</div>
+                      {asset.category === "Worker Group" && (
+                        <div className="text-[11px] text-primary font-medium mt-0.5">
+                          {(asset.maleWorkersCount || 0) + (asset.femaleWorkersCount || 0)} Total Workers
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm">{asset.owner}</TableCell>
                     <TableCell className="text-sm font-medium">{formatCurrency(asset.price)}<span className="text-xs text-muted-foreground ml-1">/{asset.priceUnit}</span></TableCell>
                     <TableCell className="text-sm">{asset.location}</TableCell>
@@ -163,15 +180,41 @@ const AssetModerationPage = () => {
                     <TableCell><StatusBadge status={asset.approvalStatus} /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => setSelectedAsset(asset)}>
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-success" onClick={() => handleApproval(asset.id, "Approved")}>
-                          <CheckCircle className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleApproval(asset.id, "Rejected")}>
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => setSelectedAsset(asset)}>
+                              <Eye className="h-3.5 w-3.5" />
+                              <span className="sr-only">View Asset Details</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>View Asset Details</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-success" onClick={() => handleApproval(asset.id, "Approved")}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span className="sr-only">Approve Asset</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Approve Asset</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleApproval(asset.id, "Rejected")}>
+                              <XCircle className="h-3.5 w-3.5" />
+                              <span className="sr-only">Reject Asset</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Reject Asset</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>

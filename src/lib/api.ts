@@ -76,13 +76,13 @@ export const fetchUsers = async (): Promise<User[]> => {
   }
 };
 
-export const updateUserStatus = async (userId: string, status: "Active" | "Deactivated"): Promise<void> => {
+export const updateUserStatus = async (userId: string, status: "Active" | "Suspended" | "Banned", reason?: string): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, reason }),
   });
   if (!response.ok) {
     throw new Error("Failed to update user status");
@@ -216,14 +216,17 @@ export const fetchAssets = async (): Promise<Asset[]> => {
     });
 
     workData.forEach((dto: any) => {
+      const maleCount = dto.maleCount ?? dto.maleWorkersCount ?? 0;
+      const femaleCount = dto.femaleCount ?? dto.femaleWorkersCount ?? 0;
+
       assets.push({
         id: dto.groupId,
         name: dto.groupName || "Worker Group",
         category: "Worker Group",
         subCategory: "Labour",
-        owner: dto.ownerName || "Unknown Owner", // Assuming ownerName is added or we fallback
+        owner: dto.ownerName || "Unknown Owner",
         ownerId: dto.ownerId,
-        price: dto.pricePerMale || dto.pricePerFemale || 0, // Simplification
+        price: dto.pricePerMale || dto.pricePerFemale || 0,
         priceUnit: "per worker",
         location: dto.location || "Unknown",
         availability: dto.isAvailable === false ? "Booked" : "Available",
@@ -234,6 +237,8 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         createdAt: new Date().toISOString(),
         serviceArea: dto.location || "Unknown",
         operatorAvailable: true,
+        maleWorkersCount: maleCount,
+        femaleWorkersCount: femaleCount,
       });
     });
 

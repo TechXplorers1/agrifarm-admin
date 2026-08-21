@@ -1,6 +1,6 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Star, MapPin, User, Calendar, ArrowLeft } from "lucide-react";
+import { CheckCircle, XCircle, Star, MapPin, User, Calendar, Users } from "lucide-react";
 import { Asset, formatCurrency } from "@/data/mockData";
 import { StatusBadge } from "./StatusBadge";
 import { ImagePreviewDialog } from "./ImagePreviewDialog";
@@ -47,25 +47,14 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
   };
 
   return (
-    <Sheet open={!!asset} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+    <Dialog open={!!asset} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-xl p-6">
         {asset && (
           <>
-            <SheetHeader>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full -ml-2 text-muted-foreground hover:text-foreground"
-                  onClick={onClose}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="sr-only">Back</span>
-                </Button>
-                <SheetTitle className="font-heading">Asset Details</SheetTitle>
-              </div>
-            </SheetHeader>
-            <div className="mt-6 space-y-6">
+            <DialogHeader>
+              <DialogTitle className="font-heading text-xl">Asset Details</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 space-y-6">
               <div className="flex items-start gap-4">
                 <div className="h-20 w-20 rounded-xl bg-muted/50 flex items-center justify-center shrink-0 overflow-hidden border border-border">
                   <ImagePreviewDialog image={asset.image} className="h-full w-full object-cover" altText={asset.name} />
@@ -85,12 +74,51 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
 
               <p className="text-sm text-muted-foreground">{asset.description}</p>
 
+              {/* Worker Group Male & Female Count Breakdown */}
+              {asset.category === "Worker Group" && (
+                <div className="bg-muted/50 rounded-xl p-4 border border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-heading font-semibold text-sm flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" /> Worker Distribution
+                    </h4>
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                      Total: {(asset.maleWorkersCount || 0) + (asset.femaleWorkersCount || 0)} Workers
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-background rounded-lg p-3 border border-border/60 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-base shrink-0">
+                        👨
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium">Male Workers</p>
+                        <p className="text-lg font-bold text-foreground">{asset.maleWorkersCount ?? 0}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-background rounded-lg p-3 border border-border/60 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center font-bold text-base shrink-0">
+                        👩
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium">Female Workers</p>
+                        <p className="text-lg font-bold text-foreground">{asset.femaleWorkersCount ?? 0}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { icon: User, label: "Owner", value: asset.owner },
                   { icon: MapPin, label: "Location", value: asset.location },
                   { icon: MapPin, label: "Service Area", value: asset.serviceArea },
                   { icon: Calendar, label: "Created", value: new Date(asset.createdAt).toLocaleDateString() },
+                  ...(asset.category === "Worker Group" ? [
+                    { icon: Users, label: "Male Workers", value: `${asset.maleWorkersCount ?? 0} Workers` },
+                    { icon: Users, label: "Female Workers", value: `${asset.femaleWorkersCount ?? 0} Workers` },
+                  ] : []),
                   ...(asset.brand ? [{ icon: Star, label: "Brand / Model", value: `${asset.brand} ${asset.model || ""}` }] : []),
                   { icon: Star, label: "Operator", value: asset.operatorAvailable ? "Available" : "Not included" },
                 ].map(({ icon: Icon, label, value }) => (
@@ -130,7 +158,7 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
             </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

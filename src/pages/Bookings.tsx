@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Search, MapPin, FileText, Clock, Users, Calendar, ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Search, MapPin, FileText, Clock, Users, Calendar, Eye } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
@@ -106,6 +107,7 @@ const BookingsPage = () => {
                   <TableHead className="text-xs">Schedule</TableHead>
                   <TableHead className="text-xs">Amount</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -123,6 +125,21 @@ const BookingsPage = () => {
                     <TableCell className="text-sm">{new Date(booking.scheduleTime).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm font-medium">{formatCurrency(booking.totalAmount)}</TableCell>
                     <TableCell><StatusBadge status={booking.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => setSelectedBooking(booking)}>
+                              <Eye className="h-3.5 w-3.5" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>View Details</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -137,25 +154,14 @@ const BookingsPage = () => {
         </div>
       </div>
 
-      <Sheet open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+      <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+        <DialogContent className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6">
           {selectedBooking && (
             <>
-              <SheetHeader>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full -ml-2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setSelectedBooking(null)}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span className="sr-only">Back</span>
-                  </Button>
-                  <SheetTitle className="font-heading">Booking Details</SheetTitle>
-                </div>
-              </SheetHeader>
-              <div className="mt-6 space-y-6">
+              <DialogHeader>
+                <DialogTitle className="font-heading text-xl">Booking Details</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-mono text-sm text-muted-foreground">{selectedBooking.id}</p>
@@ -190,8 +196,8 @@ const BookingsPage = () => {
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };

@@ -1,5 +1,5 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Bell, CheckCircle, AlertTriangle, UserPlus, Package, ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Bell, CheckCircle, AlertTriangle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NotificationPanelProps {
@@ -83,34 +83,23 @@ export function NotificationPanel({ open, onOpenChange }: NotificationPanelProps
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto p-0">
-        <SheetHeader className="p-6 pb-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={() => onOpenChange(false)}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Back</span>
-              </Button>
-              <SheetTitle className="font-heading flex items-center gap-2">
-                Notifications
-                {unreadCount > 0 && (
-                  <span className="ml-1 text-xs bg-destructive text-destructive-foreground rounded-full px-2 py-0.5">
-                    {unreadCount}
-                  </span>
-                )}
-              </SheetTitle>
-            </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full sm:max-w-md max-h-[85vh] overflow-y-auto p-0 rounded-xl">
+        <DialogHeader className="p-6 pb-4 border-b border-border">
+          <div className="flex items-center justify-between pr-4">
+            <DialogTitle className="font-heading flex items-center gap-2 text-xl">
+              Notifications
+              {unreadCount > 0 && (
+                <span className="ml-1 text-xs bg-destructive text-destructive-foreground rounded-full px-2 py-0.5 font-normal">
+                  {unreadCount}
+                </span>
+              )}
+            </DialogTitle>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => markAllReadMutation.mutate()}>
               Mark all read
             </Button>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="divide-y divide-border">
           {notifications.length === 0 && (
@@ -140,7 +129,7 @@ export function NotificationPanel({ open, onOpenChange }: NotificationPanelProps
             </div>
           ))}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
