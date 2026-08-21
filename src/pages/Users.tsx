@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Search, Eye, UserX, Ban, Star, Package, ArrowLeft } from "lucide-react";
+import { Search, Eye, UserX, UserCheck, Star, Package, ArrowLeft } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
 import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
@@ -64,7 +64,7 @@ const UsersPage = () => {
   const queryClient = useQueryClient();
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ userId, status }: { userId: string; status: "Active" | "Suspended" | "Banned" }) => 
+    mutationFn: ({ userId, status }: { userId: string; status: "Active" | "Deactivated" }) => 
       updateUserStatus(userId, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -80,12 +80,8 @@ const UsersPage = () => {
     }
   });
 
-  const handleStatusChange = (userId: string, currentStatus: string, newStatus: "Active" | "Suspended" | "Banned", e?: React.MouseEvent) => {
+  const handleStatusChange = (userId: string, currentStatus: string, newStatus: "Active" | "Deactivated", e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (currentStatus === "Banned") {
-      toast.error("Cannot modify a banned user");
-      return;
-    }
     updateStatusMutation.mutate({ userId, status: newStatus });
   };
 
@@ -119,8 +115,7 @@ const UsersPage = () => {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Suspended">Suspended</SelectItem>
-              <SelectItem value="Banned">Banned</SelectItem>
+              <SelectItem value="Deactivated">Deactivated</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -170,20 +165,12 @@ const UsersPage = () => {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-7 w-7 text-muted-foreground hover:text-warning disabled:opacity-50"
-                          disabled={user.status === "Banned" || updateStatusMutation.isPending}
-                          onClick={(e) => handleStatusChange(user.id, user.status, user.status === "Suspended" ? "Active" : "Suspended", e)}
+                          className={`h-7 w-7 ${user.status === 'Deactivated' ? 'text-success hover:text-success/80' : 'text-muted-foreground hover:text-destructive'} disabled:opacity-50`}
+                          disabled={updateStatusMutation.isPending}
+                          onClick={(e) => handleStatusChange(user.id, user.status, user.status === "Deactivated" ? "Active" : "Deactivated", e)}
+                          title={user.status === "Deactivated" ? "Activate" : "Deactivate"}
                         >
-                          <UserX className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive disabled:opacity-50"
-                          disabled={user.status === "Banned" || updateStatusMutation.isPending}
-                          onClick={(e) => handleStatusChange(user.id, user.status, "Banned", e)}
-                        >
-                          <Ban className="h-3.5 w-3.5" />
+                          {user.status === "Deactivated" ? <UserCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
                         </Button>
                       </div>
                     </TableCell>
@@ -296,19 +283,12 @@ const UsersPage = () => {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
-                    className="flex-1 text-warning border-warning/30 hover:bg-warning/10 disabled:opacity-50"
-                    disabled={selectedUser.status === "Banned" || updateStatusMutation.isPending}
-                    onClick={() => handleStatusChange(selectedUser.id, selectedUser.status, selectedUser.status === "Suspended" ? "Active" : "Suspended")}
+                    className={`flex-1 ${selectedUser.status === 'Deactivated' ? 'text-success border-success/30 hover:bg-success/10' : 'text-destructive border-destructive/30 hover:bg-destructive/10'} disabled:opacity-50`}
+                    disabled={updateStatusMutation.isPending}
+                    onClick={() => handleStatusChange(selectedUser.id, selectedUser.status, selectedUser.status === "Deactivated" ? "Active" : "Deactivated")}
                   >
-                    <UserX className="h-4 w-4 mr-1.5" /> {selectedUser.status === "Suspended" ? "Activate" : "Suspend"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10 disabled:opacity-50"
-                    disabled={selectedUser.status === "Banned" || updateStatusMutation.isPending}
-                    onClick={() => handleStatusChange(selectedUser.id, selectedUser.status, "Banned")}
-                  >
-                    <Ban className="h-4 w-4 mr-1.5" /> Ban
+                    {selectedUser.status === "Deactivated" ? <UserCheck className="h-4 w-4 mr-1.5" /> : <UserX className="h-4 w-4 mr-1.5" />} 
+                    {selectedUser.status === "Deactivated" ? "Activate" : "Deactivate"}
                   </Button>
                 </div>
               </div>

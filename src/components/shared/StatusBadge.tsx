@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type StatusType = "Active" | "Suspended" | "Banned" | "Pending" | "Approved" | "Rejected" | "Confirmed" | "Completed" | "Cancelled" | "Available" | "Booked" | "Maintenance";
+type StatusType = "Active" | "Deactivated" | "Pending" | "Approved" | "Rejected" | "Confirmed" | "Completed" | "Cancelled" | "Available" | "Booked" | "Maintenance";
 
 const statusStyles: Record<StatusType, string> = {
   Active: "bg-success/10 text-success",
@@ -9,12 +9,11 @@ const statusStyles: Record<StatusType, string> = {
   Confirmed: "bg-primary/10 text-primary",
   Completed: "bg-primary/10 text-primary",
   Pending: "bg-warning/10 text-warning",
-  Suspended: "bg-warning/10 text-warning",
+  Deactivated: "bg-destructive/10 text-destructive",
   Booked: "bg-accent/20 text-accent-foreground",
   Maintenance: "bg-muted text-muted-foreground",
   Rejected: "bg-destructive/10 text-destructive",
   Cancelled: "bg-destructive/10 text-destructive",
-  Banned: "bg-destructive/10 text-destructive",
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

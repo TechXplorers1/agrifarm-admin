@@ -4,7 +4,7 @@ export interface User {
   phone: string;
   role: "Farmer" | "Provider";
   district: string;
-  status: "Active" | "Suspended" | "Banned";
+  status: "Active" | "Deactivated";
   avatar: string;
   createdAt: string;
   email: string;
@@ -61,7 +61,7 @@ export const mockUsers: User[] = [
     phone: `+91 ${Math.floor(Math.random() * 9) + 1}${Math.floor(Math.random() * 100000000).toString().padStart(9, "0")}`,
     role: "Farmer" as const,
     district: districts[i % districts.length],
-    status: (["Active", "Active", "Active", "Suspended"] as const)[i % 4],
+    status: (["Active", "Active", "Active", "Deactivated"] as const)[i % 4],
     avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=2E7D32&textColor=ffffff`,
     createdAt: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toISOString(),
     email: `${name.toLowerCase().replace(" ", ".")}@mail.com`,

@@ -76,7 +76,7 @@ export const fetchUsers = async (): Promise<User[]> => {
   }
 };
 
-export const updateUserStatus = async (userId: string, status: "Active" | "Suspended" | "Banned"): Promise<void> => {
+export const updateUserStatus = async (userId: string, status: "Active" | "Deactivated"): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
     method: "PUT",
     headers: {
