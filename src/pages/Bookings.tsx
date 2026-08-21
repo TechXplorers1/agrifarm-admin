@@ -1,18 +1,20 @@
 import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Booking, formatCurrency } from "@/data/mockData";
-import { fetchBookings } from "@/lib/api";
+import { fetchBookings, updateBookingStatus } from "@/lib/api";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, MapPin, FileText, Clock, Users, Calendar, Eye } from "lucide-react";
+import { Search, MapPin, FileText, Clock, Users, Calendar, Eye, XCircle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 const BookingsPage = () => {
   const [searchParams] = useSearchParams();
@@ -21,6 +23,34 @@ const BookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState(statusParam);
   const [assetTypeFilter, setAssetTypeFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [confirmModalTarget, setConfirmModalTarget] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  
+  const queryClient = useQueryClient();
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ bookingId, reason }: { bookingId: string; reason: string }) => 
+      updateBookingStatus(bookingId, "CANCELLED", reason),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success("Booking cancelled successfully");
+      
+      if (selectedBooking && selectedBooking.id === variables.bookingId) {
+        setSelectedBooking({ ...selectedBooking, status: "Cancelled" });
+      }
+      setConfirmModalTarget(null);
+      setCancelReason("");
+    },
+    onError: () => {
+      toast.error("Failed to cancel booking");
+    }
+  });
+
+  const initiateCancel = (booking: Booking, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setConfirmModalTarget(booking);
+    setCancelReason("");
+  };
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['bookings'],
@@ -138,6 +168,26 @@ const BookingsPage = () => {
                             <p>View Details</p>
                           </TooltipContent>
                         </Tooltip>
+
+                        {(booking.status?.toUpperCase() !== "CANCELLED" && booking.status?.toUpperCase() !== "REJECTED" && booking.status?.toUpperCase() !== "COMPLETED") && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                                disabled={cancelMutation.isPending}
+                                onClick={(e) => initiateCancel(booking, e)}
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                <span className="sr-only">Cancel Booking</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Cancel Booking</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -193,9 +243,68 @@ const BookingsPage = () => {
                     </div>
                   ))}
                 </div>
+
+                {(selectedBooking.status?.toUpperCase() !== "CANCELLED" && selectedBooking.status?.toUpperCase() !== "REJECTED" && selectedBooking.status?.toUpperCase() !== "COMPLETED") && (
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => initiateCancel(selectedBooking)}
+                    >
+                      <XCircle className="h-4 w-4 mr-1.5" />
+                      Cancel Booking
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!confirmModalTarget} onOpenChange={(open) => !open && setConfirmModalTarget(null)}>
+        <DialogContent className="sm:max-w-md rounded-xl p-6">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Cancel Booking
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Please enter the reason for cancelling booking <span className="font-mono">{confirmModalTarget?.id}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 my-2">
+            <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+              Reason for cancellation <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              placeholder="Enter detailed reason..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="min-h-[100px] resize-none"
+            />
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-end mt-4">
+            <Button variant="outline" onClick={() => setConfirmModalTarget(null)} disabled={cancelMutation.isPending}>
+              Back
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancelMutation.isPending || !cancelReason.trim()}
+              onClick={() => {
+                if (!confirmModalTarget) return;
+                cancelMutation.mutate({
+                  bookingId: confirmModalTarget.id,
+                  reason: cancelReason.trim()
+                });
+              }}
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>

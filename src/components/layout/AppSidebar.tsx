@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, Tractor, Truck, Wrench, HardHat,
-  CalendarCheck, Receipt, Settings, ChevronDown, Leaf, LogOut
+  CalendarCheck, Settings, ChevronDown, Leaf, LogOut
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -31,7 +31,6 @@ const assetNav = [
 
 const bookingNav = [
   { title: "Active Bookings", url: "/bookings", icon: CalendarCheck },
-  { title: "Transaction History", url: "/bookings?status=Completed", icon: Receipt },
 ];
 
 const settingsNav = [

@@ -76,7 +76,7 @@ export const fetchUsers = async (): Promise<User[]> => {
   }
 };
 
-export const updateUserStatus = async (userId: string, status: "Active" | "Suspended" | "Banned", reason?: string): Promise<void> => {
+export const updateUserStatus = async (userId: string, status: "Active" | "Deactivated", reason?: string): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
     method: "PUT",
     headers: {
@@ -131,6 +131,19 @@ export const fetchBookings = async (): Promise<Booking[]> => {
   }
 };
 
+export const updateBookingStatus = async (bookingId: string, status: string, reason?: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status, reason }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update booking status");
+  }
+};
+
 export const fetchAssets = async (): Promise<Asset[]> => {
   try {
     const [equipRes, transRes, servRes, workRes] = await Promise.all([
@@ -158,7 +171,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         price: dto.pricePerHour || 0,
         priceUnit: "per hour",
         location: dto.location || "Unknown",
-        availability: dto.isAvailable === false ? "Booked" : "Available",
+        availability: dto.approvalStatus === "Rejected" ? "Unavailable" : (dto.isAvailable === false ? "Booked" : "Available"),
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
         image: getFullImageUrl(dto.imageUrl) || "🚜",
@@ -181,7 +194,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         price: dto.pricePerKmOrTrip || 0,
         priceUnit: "per trip",
         location: dto.location || "Unknown",
-        availability: dto.isAvailable === false ? "Booked" : "Available",
+        availability: dto.approvalStatus === "Rejected" ? "Unavailable" : (dto.isAvailable === false ? "Booked" : "Available"),
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
         image: getFullImageUrl(dto.imageUrl) || "🚛",
@@ -204,7 +217,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         price: dto.priceRate || 0,
         priceUnit: "per service",
         location: dto.location || "Unknown",
-        availability: dto.isAvailable === false ? "Booked" : "Available",
+        availability: dto.approvalStatus === "Rejected" ? "Unavailable" : (dto.isAvailable === false ? "Booked" : "Available"),
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
         image: getFullImageUrl(dto.imageUrl) || "🧪",
@@ -229,7 +242,7 @@ export const fetchAssets = async (): Promise<Asset[]> => {
         price: dto.pricePerMale || dto.pricePerFemale || 0,
         priceUnit: "per worker",
         location: dto.location || "Unknown",
-        availability: dto.isAvailable === false ? "Booked" : "Available",
+        availability: dto.approvalStatus === "Rejected" ? "Unavailable" : (dto.isAvailable === false ? "Booked" : "Available"),
         rating: dto.rating || 4.0,
         approvalStatus: (dto.approvalStatus || "Pending") as any,
         image: getFullImageUrl(dto.imageUrl) || "👷",
@@ -295,7 +308,7 @@ export const updateAssetApprovalStatus = async (assetId: string, category: strin
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ approvalStatus: status }),
+    body: JSON.stringify({ approvalStatus: status, isAvailable: status === "Approved" }),
   });
 
   if (!response.ok) {

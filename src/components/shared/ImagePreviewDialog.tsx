@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { X, ImageOff } from "lucide-react";
 
 interface ImagePreviewDialogProps {
   image: string;
@@ -9,6 +10,7 @@ interface ImagePreviewDialogProps {
 
 export function ImagePreviewDialog({ image, className = "", altText = "Image preview" }: ImagePreviewDialogProps) {
   const [open, setOpen] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   // Check if it's a valid URL or just an emoji/placeholder
   const isUrl = image && (image.startsWith("http") || image.startsWith("/") || image.startsWith("data:image"));
@@ -19,7 +21,10 @@ export function ImagePreviewDialog({ image, className = "", altText = "Image pre
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) setHasError(false);
+    }}>
       <DialogTrigger asChild>
         <button className="focus:outline-none transition-transform hover:scale-105 active:scale-95 group relative block overflow-hidden rounded">
           <img 
@@ -34,13 +39,30 @@ export function ImagePreviewDialog({ image, className = "", altText = "Image pre
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl p-1 bg-transparent border-0 shadow-none flex justify-center items-center">
-         <div className="relative rounded-lg overflow-hidden max-h-[90vh] flex items-center justify-center bg-black/20 backdrop-blur-sm p-2">
-            <img 
-              src={image} 
-              alt={altText} 
-              className="max-w-full max-h-[85vh] object-contain rounded drop-shadow-2xl" 
-            />
+      <DialogContent className="max-w-4xl p-1 bg-transparent border-0 shadow-none flex justify-center items-center [&>button]:hidden">
+         <div className="relative rounded-lg overflow-visible max-h-[90vh] w-full flex items-center justify-center bg-black/20 backdrop-blur-sm p-2">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpen(false)}
+              className="absolute -top-4 -right-4 z-[60] rounded-full bg-black border-2 border-white p-1.5 hover:bg-black/80 text-white transition-colors cursor-pointer shadow-lg"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </div>
+            {!hasError ? (
+              <img 
+                src={image} 
+                alt={altText} 
+                className="max-w-full max-h-[85vh] object-contain rounded drop-shadow-2xl" 
+                onError={() => setHasError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-white/70 h-[300px]">
+                <ImageOff className="h-16 w-16 mb-4 opacity-50" />
+                <p className="text-lg font-medium">No Image Found</p>
+              </div>
+            )}
          </div>
       </DialogContent>
     </Dialog>

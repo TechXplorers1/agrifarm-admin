@@ -22,7 +22,7 @@ export interface Asset {
   price: number;
   priceUnit: string;
   location: string;
-  availability: "Available" | "Booked" | "Maintenance";
+  availability: "Available" | "Booked" | "Maintenance" | "Unavailable";
   rating: number;
   approvalStatus: "Pending" | "Approved" | "Rejected";
   image: string;

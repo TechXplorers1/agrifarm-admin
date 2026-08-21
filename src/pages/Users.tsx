@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Eye, UserX, UserCheck, Ban, Star, Package, AlertTriangle } from "lucide-react";
+import { Search, Eye, UserX, UserCheck, Star, Package, AlertTriangle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
 import { AssetDetailsSheet } from "@/components/shared/AssetDetailsSheet";
@@ -21,7 +21,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 interface StatusChangeTarget {
   user: User;
-  newStatus: "Active" | "Suspended" | "Banned";
+  newStatus: "Active" | "Deactivated";
 }
 
 const UsersPage = () => {
@@ -72,7 +72,7 @@ const UsersPage = () => {
   const queryClient = useQueryClient();
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ userId, status, reason }: { userId: string; status: "Active" | "Suspended" | "Banned"; reason?: string }) =>
+    mutationFn: ({ userId, status, reason }: { userId: string; status: "Active" | "Deactivated"; reason?: string }) =>
       updateUserStatus(userId, status, reason),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -90,10 +90,10 @@ const UsersPage = () => {
     }
   });
 
-  const initiateStatusChange = (user: User, newStatus: "Active" | "Suspended" | "Banned", e?: React.MouseEvent) => {
+  const initiateStatusChange = (user: User, newStatus: "Active" | "Deactivated", e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (user.status === "Banned") {
-      toast.error("Cannot modify a banned user");
+    if (user.id === "admin") {
+      toast.error("System admin cannot be modified");
       return;
     }
     setConfirmModalTarget({ user, newStatus });
@@ -191,34 +191,16 @@ const UsersPage = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-warning disabled:opacity-50"
-                              disabled={user.status === "Banned" || updateStatusMutation.isPending}
-                              onClick={(e) => initiateStatusChange(user, user.status === "Suspended" ? "Active" : "Suspended", e)}
+                              className={`h-7 w-7 ${user.status === 'Deactivated' ? 'text-success hover:text-success/80' : 'text-muted-foreground hover:text-destructive'} disabled:opacity-50`}
+                              disabled={user.id === 'admin' || updateStatusMutation.isPending}
+                              onClick={(e) => initiateStatusChange(user, user.status === "Deactivated" ? "Active" : "Deactivated", e)}
                             >
-                              {user.status === "Suspended" ? <UserCheck className="h-3.5 w-3.5 text-success" /> : <UserX className="h-3.5 w-3.5" />}
-                              <span className="sr-only">{user.status === "Suspended" ? "Activate User" : "Suspend User"}</span>
+                              {user.status === "Deactivated" ? <UserCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
+                              <span className="sr-only">{user.status === "Deactivated" ? "Activate User" : "Deactivate User"}</span>
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p>{user.status === "Suspended" ? "Activate User" : "Suspend User"}</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive disabled:opacity-50"
-                              disabled={user.status === "Banned" || updateStatusMutation.isPending}
-                              onClick={(e) => initiateStatusChange(user, "Banned", e)}
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                              <span className="sr-only">Ban User</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Ban User</p>
+                            <p>{user.status === "Deactivated" ? "Activate User" : "Deactivate User"}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -322,20 +304,12 @@ const UsersPage = () => {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="flex-1 text-warning border-warning/30 hover:bg-warning/10 disabled:opacity-50"
-                    disabled={selectedUser.status === "Banned" || updateStatusMutation.isPending}
-                    onClick={() => initiateStatusChange(selectedUser, selectedUser.status === "Suspended" ? "Active" : "Suspended")}
+                    className={`flex-1 ${selectedUser.status === 'Deactivated' ? 'text-success border-success/30 hover:bg-success/10' : 'text-destructive border-destructive/30 hover:bg-destructive/10'} disabled:opacity-50`}
+                    disabled={selectedUser.id === 'admin' || updateStatusMutation.isPending}
+                    onClick={() => initiateStatusChange(selectedUser, selectedUser.status === "Deactivated" ? "Active" : "Deactivated")}
                   >
-                    {selectedUser.status === "Suspended" ? <UserCheck className="h-4 w-4 mr-1.5 text-success" /> : <UserX className="h-4 w-4 mr-1.5" />}
-                    {selectedUser.status === "Suspended" ? "Activate" : "Suspend"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10 disabled:opacity-50"
-                    disabled={selectedUser.status === "Banned" || updateStatusMutation.isPending}
-                    onClick={() => initiateStatusChange(selectedUser, "Banned")}
-                  >
-                    <Ban className="h-4 w-4 mr-1.5" /> Ban
+                    {selectedUser.status === "Deactivated" ? <UserCheck className="h-4 w-4 mr-1.5" /> : <UserX className="h-4 w-4 mr-1.5" />}
+                    {selectedUser.status === "Deactivated" ? "Activate" : "Deactivate"}
                   </Button>
                 </div>
               </div>
@@ -349,35 +323,28 @@ const UsersPage = () => {
         <DialogContent className="sm:max-w-md rounded-xl p-6">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
-              {confirmModalTarget?.newStatus === "Banned" && <Ban className="h-5 w-5 text-destructive" />}
-              {confirmModalTarget?.newStatus === "Suspended" && <UserX className="h-5 w-5 text-warning" />}
+              {confirmModalTarget?.newStatus === "Deactivated" && <UserX className="h-5 w-5 text-destructive" />}
               {confirmModalTarget?.newStatus === "Active" && <UserCheck className="h-5 w-5 text-success" />}
-              {confirmModalTarget?.newStatus === "Banned" ? "Ban User Account" : confirmModalTarget?.newStatus === "Suspended" ? "Suspend User Account" : "Reactivate User Account"}
+              {confirmModalTarget?.newStatus === "Deactivated" ? "Deactivate User Account" : "Reactivate User Account"}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground mt-1">
               {confirmModalTarget?.newStatus === "Active"
                 ? `Are you sure you want to reactivate ${confirmModalTarget?.user.name}'s account?`
-                : `Please enter the reason for ${confirmModalTarget?.newStatus.toLowerCase()}ing ${confirmModalTarget?.user.name}.`}
+                : `Please enter the reason for deactivating ${confirmModalTarget?.user.name}.`}
             </DialogDescription>
           </DialogHeader>
 
           {confirmModalTarget && confirmModalTarget.newStatus !== "Active" && (
             <div className="space-y-2 my-2">
               <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Reason for {confirmModalTarget.newStatus.toLowerCase()}ing <span className="text-destructive">*</span>
+                Reason for deactivating <span className="text-destructive">*</span>
               </label>
               <Textarea
-                placeholder={`Enter detailed reason for ${confirmModalTarget.newStatus.toLowerCase()}ing this user...`}
+                placeholder={`Enter detailed reason for deactivating this user...`}
                 value={statusReason}
                 onChange={(e) => setStatusReason(e.target.value)}
                 className="min-h-[100px] resize-none"
               />
-              {confirmModalTarget.newStatus === "Banned" && (
-                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  Warning: Banned users will be permanently blocked from accessing the platform.
-                </p>
-              )}
             </div>
           )}
 
@@ -386,8 +353,8 @@ const UsersPage = () => {
               Cancel
             </Button>
             <Button
-              variant={confirmModalTarget?.newStatus === "Banned" ? "destructive" : "default"}
-              className={confirmModalTarget?.newStatus === "Suspended" ? "bg-warning hover:bg-warning/90 text-warning-foreground" : confirmModalTarget?.newStatus === "Active" ? "bg-success hover:bg-success/90 text-success-foreground" : ""}
+              variant={confirmModalTarget?.newStatus === "Deactivated" ? "destructive" : "default"}
+              className={confirmModalTarget?.newStatus === "Active" ? "bg-success hover:bg-success/90 text-success-foreground" : ""}
               disabled={updateStatusMutation.isPending || (confirmModalTarget?.newStatus !== "Active" && !statusReason.trim())}
               onClick={() => {
                 if (!confirmModalTarget) return;
@@ -398,7 +365,7 @@ const UsersPage = () => {
                 });
               }}
             >
-              {updateStatusMutation.isPending ? "Updating..." : `Confirm ${confirmModalTarget?.newStatus === "Active" ? "Activation" : confirmModalTarget?.newStatus}`}
+              {updateStatusMutation.isPending ? "Updating..." : `Confirm ${confirmModalTarget?.newStatus === "Active" ? "Activation" : "Deactivation"}`}
             </Button>
           </DialogFooter>
         </DialogContent>
