@@ -4,49 +4,31 @@ import { CheckCircle, XCircle, Star, MapPin, User, Calendar, Users } from "lucid
 import { Asset, formatCurrency } from "@/data/mockData";
 import { StatusBadge } from "./StatusBadge";
 import { ImagePreviewDialog } from "./ImagePreviewDialog";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { updateAssetApprovalStatus } from "@/lib/api";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 
 interface AssetDetailsSheetProps {
   asset: Asset | null;
   onClose: () => void;
-  // If provided, handles state updates locally, otherwise the component handles global state
-  onApprovalUpdate?: (assetId: string, status: "Approved" | "Rejected") => void; 
+  onApprovalUpdate?: (assetId: string, status: "Approved" | "Rejected", reason?: string) => void; 
 }
 
 export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDetailsSheetProps) {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [deactivateReason, setDeactivateReason] = useState("");
 
-  const updateApprovalMutation = useMutation({
-    mutationFn: ({ assetId, category, status }: { assetId: string; category: string; status: "Approved" | "Rejected" }) => 
-      updateAssetApprovalStatus(assetId, category, status),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
-      toast({
-        title: variables.status === "Approved" ? "Asset Approved" : "Asset Rejected",
-        description: `Asset has been ${variables.status.toLowerCase()} successfully.`,
-      });
-      if (onApprovalUpdate) {
-        onApprovalUpdate(variables.assetId, variables.status);
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update asset approval status",
-        variant: "destructive"
-      });
+  const handleApproval = (status: "Approved" | "Rejected", reason?: string) => {
+    if (!asset || !onApprovalUpdate) return;
+    onApprovalUpdate(asset.id, status, reason);
+    if (status === "Rejected") {
+      setShowDeactivateDialog(false);
+      setDeactivateReason("");
     }
-  });
-
-  const handleApproval = (status: "Approved" | "Rejected") => {
-    if (!asset) return;
-    updateApprovalMutation.mutate({ assetId: asset.id, category: asset.category, status });
   };
 
   return (
+    <>
     <Dialog open={!!asset} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-xl p-6">
         {asset && (
@@ -149,7 +131,7 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
                 <Button
                   variant="destructive"
                   className="flex-1"
-                  onClick={() => handleApproval("Rejected")}
+                  onClick={() => setShowDeactivateDialog(true)}
                   disabled={asset.approvalStatus === "Rejected"}
                 >
                   <XCircle className="h-4 w-4 mr-1.5" /> Deactivate
@@ -160,5 +142,39 @@ export function AssetDetailsSheet({ asset, onClose, onApprovalUpdate }: AssetDet
         )}
       </DialogContent>
     </Dialog>
+
+    <Dialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Deactivate Asset</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="reason">Reason for deactivation</Label>
+            <Textarea
+              id="reason"
+              placeholder="Enter reason for deactivating this asset..."
+              value={deactivateReason}
+              onChange={(e) => setDeactivateReason(e.target.value)}
+              className="resize-none"
+              rows={3}
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={() => setShowDeactivateDialog(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => handleApproval("Rejected", deactivateReason)}
+            disabled={!deactivateReason.trim()}
+          >
+            Confirm Deactivation
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

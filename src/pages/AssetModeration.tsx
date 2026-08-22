@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Eye, CheckCircle, XCircle, Star } from "lucide-react";
+import { Search, Eye, Star } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ImagePreviewDialog } from "@/components/shared/ImagePreviewDialog";
@@ -54,8 +54,8 @@ const AssetModerationPage = () => {
   }, [search, categoryFilter, approvalFilter, assets]);
 
   const updateApprovalMutation = useMutation({
-    mutationFn: ({ assetId, category, status }: { assetId: string; category: string; status: "Approved" | "Rejected" }) => 
-      updateAssetApprovalStatus(assetId, category, status),
+    mutationFn: ({ assetId, category, status, reason }: { assetId: string; category: string; status: "Approved" | "Rejected"; reason?: string }) => 
+      updateAssetApprovalStatus(assetId, category, status, reason),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
       toast({
@@ -63,7 +63,11 @@ const AssetModerationPage = () => {
         description: `Asset has been ${variables.status === "Approved" ? "activated" : "deactivated"} successfully.`,
       });
       if (selectedAsset?.id === variables.assetId) {
-        setSelectedAsset(prev => prev ? { ...prev, approvalStatus: variables.status } : null);
+        setSelectedAsset(prev => prev ? { 
+          ...prev, 
+          approvalStatus: variables.status,
+          availability: variables.status === "Rejected" ? "Unavailable" : (prev.availability === "Unavailable" ? "Available" : prev.availability)
+        } : null);
       }
     },
     onError: () => {
@@ -75,10 +79,10 @@ const AssetModerationPage = () => {
     }
   });
 
-  const handleApproval = (assetId: string, status: "Approved" | "Rejected") => {
+  const handleApproval = (assetId: string, status: "Approved" | "Rejected", reason?: string) => {
     const asset = assets.find(a => a.id === assetId);
     if (!asset) return;
-    updateApprovalMutation.mutate({ assetId, category: asset.category, status });
+    updateApprovalMutation.mutate({ assetId, category: asset.category, status, reason });
   };
 
   const categoryTitle = categoryFilter !== "all" ? categoryFilter : "All Assets";
@@ -107,12 +111,12 @@ const AssetModerationPage = () => {
             <Input placeholder="Search assets or owners..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <Select value={approvalFilter} onValueChange={setApprovalFilter}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Approval Status" /></SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Approved">Approved</SelectItem>
-              <SelectItem value="Rejected">Rejected</SelectItem>
+              <SelectItem value="Approved">Active</SelectItem>
+              <SelectItem value="Rejected">Deactivated</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -130,7 +134,7 @@ const AssetModerationPage = () => {
                   <TableHead className="text-xs">Location</TableHead>
                   <TableHead className="text-xs">Availability</TableHead>
                   <TableHead className="text-xs">Rating</TableHead>
-                  <TableHead className="text-xs">Approval</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -192,29 +196,7 @@ const AssetModerationPage = () => {
                           </TooltipContent>
                         </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-success" onClick={() => handleApproval(asset.id, "Approved")}>
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              <span className="sr-only">Approve Asset</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Approve Asset</p>
-                          </TooltipContent>
-                        </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleApproval(asset.id, "Rejected")}>
-                              <XCircle className="h-3.5 w-3.5" />
-                              <span className="sr-only">Reject Asset</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Reject Asset</p>
-                          </TooltipContent>
-                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>

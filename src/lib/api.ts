@@ -102,7 +102,7 @@ export const fetchBookings = async (): Promise<Booking[]> => {
     ]);
 
     const usersMap = new Map<string, any>(usersRes.map((u: any) => [u.userId, u]));
-    const assetsMap = new Map<string, Asset>(assets.map(a => [a.id, a]));
+    const assetsMap = new Map<string, Asset>(assets.map(a => [a.id, a] as [string, Asset]));
 
     return data.map((dto: any): Booking => {
       const farmer = usersMap.get(dto.farmerId);
@@ -132,12 +132,18 @@ export const fetchBookings = async (): Promise<Booking[]> => {
 };
 
 export const updateBookingStatus = async (bookingId: string, status: string, reason?: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status`, {
+  const url = new URL(`${API_BASE_URL}/bookings/${bookingId}/status`);
+  url.searchParams.append("status", status);
+  if (reason) {
+    url.searchParams.append("cancellationReason", reason);
+    url.searchParams.append("cancelledBy", "Admin");
+  }
+
+  const response = await fetch(url.toString(), {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ status, reason }),
   });
   if (!response.ok) {
     throw new Error("Failed to update booking status");
@@ -287,7 +293,7 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
   if (!response.ok) throw new Error("Failed to mark all as read");
 };
 
-export const updateAssetApprovalStatus = async (assetId: string, category: string, status: "Approved" | "Rejected"): Promise<void> => {
+export const updateAssetApprovalStatus = async (assetId: string, category: string, status: "Approved" | "Rejected", reason?: string): Promise<void> => {
   let endpoint = "";
   const cat = category.toLowerCase().replace(/\s+/g, "");
 
@@ -308,7 +314,7 @@ export const updateAssetApprovalStatus = async (assetId: string, category: strin
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ approvalStatus: status, isAvailable: status === "Approved" }),
+    body: JSON.stringify({ approvalStatus: status, isAvailable: status === "Approved", deactivationReason: reason }),
   });
 
   if (!response.ok) {

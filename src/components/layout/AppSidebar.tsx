@@ -52,9 +52,9 @@ export function AppSidebar() {
   const isActive = (url: string) => {
     if (url === "/") return location.pathname === "/";
     const [urlPath, urlQuery] = url.split("?");
-    
+
     if (location.pathname !== urlPath) return false;
-    
+
     if (urlQuery) {
       return location.search.includes(urlQuery);
     } else {

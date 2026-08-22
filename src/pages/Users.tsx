@@ -75,8 +75,14 @@ const UsersPage = () => {
     mutationFn: ({ userId, status, reason }: { userId: string; status: "Active" | "Deactivated"; reason?: string }) =>
       updateUserStatus(userId, status, reason),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      // Manually update the cache to prevent the list from shuffling
+      queryClient.setQueryData(['users'], (oldData: User[] | undefined) => {
+        if (!oldData) return [];
+        return oldData.map(u => 
+          u.id === variables.userId ? { ...u, status: variables.status as any } : u
+        );
+      });
+      
       toast.success(`User status updated to ${variables.status.toLowerCase()}`);
 
       if (selectedUser && selectedUser.id === variables.userId) {
